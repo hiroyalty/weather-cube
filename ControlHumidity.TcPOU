@@ -1,0 +1,16 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4019.2">
+  <POU Name="ControlHumidity" Id="{dcfda000-fb12-495a-a79b-d12a2ad9cac0}" SpecialFunc="None">
+    <Declaration><![CDATA[PROGRAM ControlHumidity
+VAR
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[IF iHumidity < stepArray[iCurrentIndex].iHumidityValue-5 THEN
+	O_bKanavapuhallinKosteutus := TRUE; // Do something to raise humidity
+ELSIF iHumidity > stepArray[iCurrentIndex].iHumidityValue+5 THEN
+	O_bKanavapuhallinKosteutus := FALSE; // Do something to decrease humidity
+END_IF]]></ST>
+    </Implementation>
+  </POU>
+</TcPlcObject>

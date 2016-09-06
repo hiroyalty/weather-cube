@@ -1,0 +1,37 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4019.2">
+  <POU Name="Initialize" Id="{53278edd-f577-458a-a0d0-7b08b60bae6b}" SpecialFunc="None">
+    <Declaration><![CDATA[PROGRAM Initialize
+VAR
+	i : INT; // For iterating
+	startHMIprocess : NT_StartProcess;
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[// Do some initialization
+FOR i:=1 TO MAXNUMSTEPS DO // Make an empty table
+	sIndexArray[i] := '';
+	sStepNameArray[i] := '';
+	sStepTimeArray[i] := '';
+	sStepTemperatureArray[i] := '';
+	sStepHumidityArray[i] := '';
+	sStepProgressArray[i] := '';
+END_FOR
+
+iScreen := MAIN_SCREEN;
+
+startHMIprocess(
+		NETID:='',
+        //PATHSTR:= 'C:\TwinCAT\3.1\Components\Plc\Tc3PlcHmi\Tc3PlcHmi.exe',
+        //DIRNAME:='C:\TwinCAT\3.1\Components\Plc\Tc3PlcHmi' ,
+		PATHSTR:= '\Hard Disk\TwinCAT\3.1\Components\Plc\Tc3PlcHmi\Tc3PlcHmiCE7ARMV7.exe', // For TC 3.1 build 4018.16
+        DIRNAME:='\Hard Disk\TwinCAT\3.1\Components\Plc\Tc3PlcHmi',
+        COMNDLINE:=,
+        START:= TRUE,
+        TMOUT:= T#2S,
+        BUSY=> ,
+        ERR=> ,
+        ERRID=> );]]></ST>
+    </Implementation>
+  </POU>
+</TcPlcObject>

@@ -1,0 +1,85 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4019.2">
+  <POU Name="MAIN" Id="{93d0e59b-be2f-4eb5-b690-cb3242908526}" SpecialFunc="None">
+    <Declaration><![CDATA[PROGRAM MAIN
+VAR
+	bAddButton : BOOL := FALSE;
+	bMakingNew : BOOL;
+	
+	bChangeButton1 : BOOL := FALSE;
+	bChangeButton2 : BOOL := FALSE;
+	bChangeButton3 : BOOL := FALSE;
+	bChangeButton4 : BOOL := FALSE;
+	bChangeButton5 : BOOL := FALSE;
+	bChangeButton6 : BOOL := FALSE;
+	bChangeButton7 : BOOL := FALSE;
+	bChangeButton8 : BOOL := FALSE;
+	bChangeButton9 : BOOL := FALSE;
+	bChangeButton10 : BOOL := FALSE;
+	bChangeButtonArray : ARRAY [1..MAXNUMSTEPS] OF BOOL;
+	
+	bInitialized : BOOL := FALSE;
+	i : INT; // For iterating FOR loop
+END_VAR]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[// Updating inputs
+iTemp := (I_iTemp2/10 + REAL_TO_INT((I_iTemp3/32768.0)*10*100 - 40))/2; // Take average of 2 temperature inputs
+iHumidity := REAL_TO_INT((I_iRH/32768.0)*10*100);
+
+IF NOT bInitialized THEN
+	Initialize(); // Initialize program if it was not initialized
+	bInitialized := TRUE;
+END_IF
+
+// Stupid updates of buttons states, these buttons are for updating already set step settings (the small buttons column)
+bChangeButtonArray[1] := bChangeButton1;
+bChangeButtonArray[2] := bChangeButton2;
+bChangeButtonArray[3] := bChangeButton3;
+bChangeButtonArray[4] := bChangeButton4;
+bChangeButtonArray[5] := bChangeButton5;
+bChangeButtonArray[6] := bChangeButton6;
+bChangeButtonArray[7] := bChangeButton7;
+bChangeButtonArray[8] := bChangeButton8;
+bChangeButtonArray[9] := bChangeButton9;
+bChangeButtonArray[10] := bChangeButton10;
+
+IF iScreen=CONFIGURATION_SCREEN THEN
+	RunStepConfiguration();
+ELSE // In main screen
+	UpdateDisplay();
+	IF bStopButton THEN
+		// Do something to stop everything here
+		O_bCoolingOn := FALSE;
+		O_bWaterValveOn := FALSE;
+		O_bAirValveOn := FALSE;
+		O_bHeaterOn := FALSE;
+		O_bHeaterOn2 := FALSE;
+		O_bHeaterOn3 := FALSE;
+		bRunSwitch := FALSE;
+		bStopButton := FALSE;
+	END_IF
+	IF bRunSwitch THEN // In run mode
+		// Write running program code here
+		RunProcesses();
+	ELSE // In configuration mode
+		bRunningInitialized := FALSE;
+		IF bAddButton THEN // Add button pressed
+			bMakingNew := TRUE; // As we are creating a new step
+			bConfigurationInitialized := FALSE;
+			iScreen := CONFIGURATION_SCREEN;
+		ELSE
+			FOR i:=1 TO iNumSteps DO
+				IF bChangeButtonArray[i] THEN // Checking if Jussi pressed any of the buttons for changing data
+					iCurrentIndex := i;
+					bMakingNew := FALSE; // Not making new step but modifying
+					bConfigurationInitialized := FALSE;
+					iScreen := CONFIGURATION_SCREEN;
+					EXIT; // Exit the loop
+				END_IF
+			END_FOR
+		END_IF
+	END_IF
+END_IF]]></ST>
+    </Implementation>
+  </POU>
+</TcPlcObject>

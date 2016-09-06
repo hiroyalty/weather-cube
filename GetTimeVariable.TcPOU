@@ -1,0 +1,20 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4019.2">
+  <POU Name="GetTimeVariable" Id="{b6e0bcc5-512b-486d-b0e6-39543a1d06b8}" SpecialFunc="None">
+    <Declaration><![CDATA[FUNCTION GetTimeVariable : TIME
+VAR_INPUT
+	timeData : TTIME;
+END_VAR
+VAR
+	sTimeString : STRING;
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[sTimeString := CONCAT('T#', CONCAT(INT_TO_STRING(timeData.iDays), 'd'));
+sTimeString := CONCAT(sTimeString, CONCAT(INT_TO_STRING(timeData.iHours), 'h'));
+sTimeString := CONCAT(sTimeString, CONCAT(INT_TO_STRING(timeData.iMinutes), 'm'));
+sTimeString := CONCAT(sTimeString, CONCAT(INT_TO_STRING(timeData.iSeconds), 's'));
+GetTimeVariable := STRING_TO_TIME(sTimeString);]]></ST>
+    </Implementation>
+  </POU>
+</TcPlcObject>

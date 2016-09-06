@@ -1,0 +1,24 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4019.2">
+  <POU Name="CalculateTotalRunningTime" Id="{8f828182-adf7-49a7-8ebd-552bb69e547b}" SpecialFunc="None">
+    <Declaration><![CDATA[FUNCTION CalculateTotalRunningTime : LREAL
+VAR_INPUT
+END_VAR
+VAR
+	i : INT;
+	totalTime, temp : LREAL;
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[totalTime := 0;
+FOR i:=1 TO iNumSteps DO
+	totalTime := totalTime + GetTimeInSeconds(timeData:=stepArray[i].timeData);
+	IF stepArray[i].iType=RAIN THEN
+		totalTime := totalTime + 2*60; // plus 2 minutes for drying
+	END_IF
+END_FOR
+totalTime := totalTime*iNumLoops;
+CalculateTotalRunningTime := totalTime;]]></ST>
+    </Implementation>
+  </POU>
+</TcPlcObject>

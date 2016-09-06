@@ -1,0 +1,76 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4019.2">
+  <POU Name="UpdateDisplay" Id="{10cb4ebb-1b21-44fc-8558-d24be13882c2}" SpecialFunc="None">
+    <Declaration><![CDATA[PROGRAM UpdateDisplay
+VAR
+	i : INT;
+	d1, d2 : LREAL;
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[IF bRunSwitch THEN // Update the overall progress
+	IF fTotalTime > 0 THEN
+//		sTotalProgress := CONCAT(INT_TO_STRING(iLoopCount*100/iNumLoops), ' %');
+		sTotalProgress := CONCAT(INT_TO_STRING(LREAL_TO_INT(fTotalElapsedTime*100/fTotalTime)), ' %');
+	ELSE
+		sTotalProgress := '';
+	END_IF
+ELSE
+	sTotalProgress := '';
+END_IF
+
+FOR i:=1 TO iNumSteps DO // Update the table
+	sIndexArray[i] := INT_TO_STRING(i);
+	sStepTimeArray[i] := CONCAT(
+							CONCAT(
+								CONCAT(INT_TO_STRING(stepArray[i].timeData.iDays), 'd '),
+						 		CONCAT(INT_TO_STRING(stepArray[i].timeData.iHours), 'h ')),
+						 	CONCAT(
+								CONCAT(INT_TO_STRING(stepArray[i].timeData.iMinutes), 'm '),
+						 		CONCAT(INT_TO_STRING(stepArray[i].timeData.iSeconds), 's'))
+							);
+	CASE stepArray[i].iType OF
+		RAIN:
+			sStepNameArray[i] := 'RAIN';
+			sStepTemperatureArray[i] := '###';
+		COOLING:
+			sStepNameArray[i] := 'COOLING';
+			sStepTemperatureArray[i] := INT_TO_STRING(stepArray[i].iValue);
+		HEATING:
+			sStepNameArray[i] := 'HEATING';
+			sStepTemperatureArray[i] := INT_TO_STRING(stepArray[i].iValue);
+	END_CASE
+	sStepHumidityArray[i] := CONCAT(INT_TO_STRING(stepArray[i].iHumidityValue), ' %');
+	
+	// Update individual step progresses here
+	IF bRunSwitch THEN
+		IF i<iCurrentIndex THEN
+			sStepProgressArray[i] := '100%';
+		ELSIF i>iCurrentIndex THEN
+			sStepProgressArray[i] := '';
+		ELSE
+			IF stepArray[iCurrentIndex].iType=RAIN THEN
+				IF RunProcesses.bNeedBlastTimer THEN
+					d1 := GetTimeInSeconds(stepArray[iCurrentIndex].timeData) +
+							TIME_TO_LREAL(RunProcesses.fbBlastTimer.ET)/1000;					
+				ELSE
+					d1 := TIME_TO_LREAL(RunProcesses.fbTimer.ET)/1000;
+				END_IF
+				d2 := GetTimeInSeconds(stepArray[iCurrentIndex].timeData) + 2*60; // Plus 2 minutes for drying
+			ELSE
+				d1 := TIME_TO_LREAL(RunProcesses.fbTimer.ET);
+				d2 := TIME_TO_LREAL(RunProcesses.fbTimer.PT);
+			END_IF
+			IF d2>0 THEN
+				sStepProgressArray[i] := CONCAT(INT_TO_STRING(LREAL_TO_INT(d1*100/d2)), ' %');
+			ELSE
+				sStepProgressArray[i] := '100 %';
+			END_IF
+		END_IF
+	ELSE
+		sStepProgressArray[i] := '';
+	END_IF
+END_FOR]]></ST>
+    </Implementation>
+  </POU>
+</TcPlcObject>

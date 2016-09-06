@@ -1,0 +1,101 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4019.2">
+  <POU Name="RunStepConfiguration" Id="{70db23aa-9308-4f6a-8b25-509d00968108}" SpecialFunc="None">
+    <Declaration><![CDATA[PROGRAM RunStepConfiguration
+VAR
+	timeData : TTIME;
+	iTemperatureValue : INT;
+	iHumidityValue : INT;
+	
+	iStepOptionCheckBox : INT := 0;
+	bOkButton : BOOL := FALSE;
+	bRemoveButton : BOOL := FALSE;
+	bCancelButton: BOOL := FALSE;
+	bHeaterCheckBox1 : BOOL := FALSE;
+	bHeaterCheckBox2 : BOOL := FALSE;
+	bHeaterCheckBox3 : BOOL := FALSE;
+	bHumidityControlCheckBox : BOOL := FALSE;
+	
+	i : INT; // For iterating with FOR loop
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[IF NOT bConfigurationInitialized THEN
+	IF MAIN.bMakingNew THEN // Creating a new step
+		iStepOptionCheckBox := 0;
+		timeData.iDays := 0;
+		timeData.iHours := 0;
+		timeData.iMinutes := 0;
+		timeData.iSeconds := 0;
+		iTemperatureValue := 0;
+		iHumidityValue := 0;
+		bHeaterCheckBox1 := FALSE;
+		bHeaterCheckBox2 := FALSE;
+		bHeaterCheckBox3 := FALSE;
+		bHumidityControlCheckBox := FALSE;
+	ELSE // Modifying old step settings
+		iStepOptionCheckBox := stepArray[iCurrentIndex].iType;
+		timeData := stepArray[iCurrentIndex].timeData;
+		iTemperatureValue := stepArray[iCurrentIndex].iValue;
+		iHumidityValue := stepArray[iCurrentIndex].iHumidityValue;
+		IF stepArray[iCurrentIndex].iType=HEATING THEN // Only for heating
+			bHeaterCheckBox1 := bHeaterOptions[iCurrentIndex,1];
+			bHeaterCheckBox2 := bHeaterOptions[iCurrentIndex,2];
+			bHeaterCheckBox3 := bHeaterOptions[iCurrentIndex,3];
+		END_IF
+		bHumidityControlCheckBox := stepArray[iCurrentIndex].bHumidityControlOn;
+	END_IF
+	bConfigurationInitialized := TRUE;
+END_IF
+
+IF bOkButton THEN
+	// Create new step or save modification
+	IF MAIN.bMakingNew THEN
+		iNumSteps := iNumSteps+1; // Increment the steps count
+		iCurrentIndex := iNumSteps; // Use the lastest step
+	END_IF
+	stepArray[iCurrentIndex].iType := iStepOptionCheckBox; // Save the type of process
+	stepArray[iCurrentIndex].timeData := timeData; // Save timer settings
+	CASE iStepOptionCheckBox OF
+		RAIN:
+			stepArray[iCurrentIndex].iValue := 0; // For now this is unnecessary for rainning
+			stepArray[iCurrentIndex].iHumidityValue := 100; // Rainning should mean 100% humidity
+		COOLING, HEATING:
+			stepArray[iCurrentIndex].iValue := iTemperatureValue; // Save new temperature value
+			stepArray[iCurrentIndex].iHumidityValue := iHumidityValue; // Save new humidity value
+	END_CASE
+	// These code only makes sense when this saved process is heating
+	IF NOT (bHeaterCheckBox1 OR bHeaterCheckBox2 OR bHeaterCheckBox3) THEN
+		bHeaterCheckBox3 := TRUE;
+	END_IF
+	bHeaterOptions[iCurrentIndex,1] := bHeaterCheckBox1;
+	bHeaterOptions[iCurrentIndex,2] := bHeaterCheckBox2;
+	bHeaterOptions[iCurrentIndex,3] := bHeaterCheckBox3;
+	////////////////////////////////////////////////////////////////
+	stepArray[iCurrentIndex].bHumidityControlOn := bHumidityControlCheckBox;
+	iScreen := MAIN_SCREEN; // Go back to main screen
+END_IF
+
+IF bCancelButton THEN
+	// Do nothing to save new data
+	iScreen := MAIN_SCREEN; // Go back to main screen
+END_IF
+
+IF bRemoveButton THEN
+	FOR i:=iCurrentIndex TO iNumSteps-1 DO
+		stepArray[i] := stepArray[i+1]; // Delete the currently configured step by moving all steps after this step 1 index above
+	END_FOR
+	// Clear some table variables
+	sIndexArray[iNumSteps] := '';
+	sStepNameArray[iNumSteps] := '';
+	sStepTimeArray[iNumSteps] := '';
+	sStepTemperatureArray[iNumSteps] := '';
+	sStepHumidityArray[iNumSteps] := '';
+	sStepProgressArray[iNumSteps] := '';
+	
+	iNumSteps := iNumSteps-1; // Decrement the steps count
+	iScreen := MAIN_SCREEN; // Go back to main screen
+END_IF]]></ST>
+    </Implementation>
+  </POU>
+</TcPlcObject>

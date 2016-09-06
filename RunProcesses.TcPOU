@@ -1,0 +1,136 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4019.2">
+  <POU Name="RunProcesses" Id="{f002dd51-2318-4f48-a7bb-96b92bc95d69}" SpecialFunc="None">
+    <Declaration><![CDATA[PROGRAM RunProcesses
+VAR
+	fbTimer : TON;
+	fbBlastTimer : TON;
+	bNeedBlastTimer : BOOL;
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[IF NOT bRunningInitialized THEN
+	// Initialize before running
+	iCurrentIndex := 1; // Start from first step
+	fbTimer(IN:=FALSE,PT:=GetTimeVariable(stepArray[iCurrentIndex].timeData));
+	bNeedBlastTimer := FALSE;
+	iLoopCount := 0;
+	fTotalElapsedTime := 0;
+	fTotalTime := CalculateTotalRunningTime();
+	bRunningInitialized := TRUE;
+END_IF
+
+CASE stepArray[iCurrentIndex].iType OF
+	RAIN:
+		IF bNeedBlastTimer THEN // If blast timer is running then not run the code for other steps
+			IF fbBlastTimer.Q THEN
+				O_bAirValveOn := FALSE;
+				fbBlastTimer.IN := FALSE;
+				bNeedBlastTimer := FALSE;
+				fTotalElapsedTime := fTotalElapsedTime + 2*60; // plus 2 minutes
+				
+				iCurrentIndex := iCurrentIndex+1; // Switch to next step
+			END_IF
+			fbBlastTimer(); // Run blast timer
+		ELSE
+			fbTimer.IN := TRUE;
+		
+			IF fbTimer.Q THEN
+				O_bWaterValveOn := FALSE;
+				fbTimer.IN := FALSE;
+				fTotalElapsedTime := fTotalElapsedTime + GetTimeInSeconds(stepArray[iCurrentIndex].timeData);
+				
+				// Turn on blast timer
+				fbBlastTimer.IN := TRUE;
+				fbBlastTimer.PT := TIME_TO_DRY_WATER; // 2 minutes to dry water
+				O_bAirValveOn := TRUE;
+				bNeedBlastTimer := TRUE;
+			ELSE
+				O_bWaterValveOn := TRUE;
+			END_IF
+		
+			IF stepArray[iCurrentIndex].bHumidityControlOn THEN // Control humidity
+				IF iHumidity < stepArray[iCurrentIndex].iHumidityValue-5 THEN
+					O_bKanavapuhallinKosteutus := TRUE; // Do something to raise humidity
+				ELSIF iHumidity > stepArray[iCurrentIndex].iHumidityValue+5 THEN
+				O_bKanavapuhallinKosteutus := FALSE; // Do something to decrease humidity
+				END_IF
+			END_IF
+		END_IF
+
+	COOLING:
+		// Run cooling process
+		IF iTemp <= stepArray[iCurrentIndex].iValue THEN // Checking temperature
+			O_bCoolingOn := FALSE;
+			fbTimer.IN := TRUE;
+			fbTimer.PT := GetTimeVariable(stepArray[iCurrentIndex].timeData);
+		ELSE
+			O_bCoolingOn := TRUE;
+		END_IF
+		
+		IF fbTimer.Q THEN // When timer finishes
+			O_bCoolingOn := FALSE; // Turn off cooling
+			fbTimer.IN := FALSE; // Turn off timer
+			fTotalElapsedTime := fTotalElapsedTime + GetTimeInSeconds(stepArray[iCurrentIndex].timeData);
+			iCurrentIndex := iCurrentIndex+1; // Switch to next step
+		END_IF
+		
+		IF stepArray[iCurrentIndex].bHumidityControlOn THEN // Control humidity
+			ControlHumidity();
+		END_IF
+	
+	HEATING:
+		// Run heating process
+		IF iTemp >= stepArray[iCurrentIndex].iValue THEN // Checking temperature
+			// Turn off heaters
+			O_bHeaterOn := FALSE;
+			O_bHeaterOn2 := FALSE;
+			O_bHeaterOn3 := FALSE;
+				// Turn on timer
+			fbTimer.IN := TRUE;
+			fbTimer.PT := GetTimeVariable(stepArray[iCurrentIndex].timeData);
+		ELSE
+			// Activate heaters
+			IF bHeaterOptions[iCurrentIndex,1] THEN O_bHeaterOn := TRUE; END_IF
+			IF bHeaterOptions[iCurrentIndex,2] THEN O_bHeaterOn2 := TRUE; END_IF
+			IF bHeaterOptions[iCurrentIndex,3] THEN O_bHeaterOn3 := TRUE; END_IF
+		END_IF
+		
+		IF fbTimer.Q THEN // When timer finishes
+			// Turn off heaters
+			O_bHeaterOn := FALSE;
+			O_bHeaterOn2 := FALSE;
+			O_bHeaterOn3 := FALSE;
+			
+			fbTimer.IN := FALSE; // Turn off timer
+			fTotalElapsedTime := fTotalElapsedTime + GetTimeInSeconds(stepArray[iCurrentIndex].timeData);
+			iCurrentIndex := iCurrentIndex+1; // Switch to next step
+		END_IF
+		
+		IF stepArray[iCurrentIndex].bHumidityControlOn THEN // Control humidity
+			ControlHumidity();
+		END_IF
+END_CASE
+
+fbTimer(); // Run timer
+
+O_bAirValveOn := O_bAirValveOn OR O_bKanavapuhallinKosteutus; // An attempt to increse humidity, NEED TO BE CHECKED
+
+IF iCurrentIndex > iNumSteps THEN
+	iLoopCount := iLoopCount+1;
+	iCurrentIndex := 1; // Go back to step 1
+END_IF
+
+IF iLoopCount >= iNumLoops THEN
+	// Turn off everything and turn Run switch off
+	O_bCoolingOn := FALSE;
+	O_bWaterValveOn := FALSE;
+	O_bAirValveOn := FALSE;
+	O_bHeaterOn := FALSE;
+	O_bHeaterOn2 := FALSE;
+	O_bHeaterOn3 := FALSE;
+	bRunSwitch := FALSE;
+END_IF]]></ST>
+    </Implementation>
+  </POU>
+</TcPlcObject>

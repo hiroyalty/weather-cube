@@ -1,0 +1,18 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4019.2">
+  <POU Name="GetTimeInSeconds" Id="{08b22863-45dc-4d4f-be6e-b6ba83472a5d}" SpecialFunc="None">
+    <Declaration><![CDATA[FUNCTION GetTimeInSeconds : LREAL
+VAR_INPUT
+	timeData : TTIME;
+END_VAR
+VAR
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[GetTimeInSeconds := (((INT_TO_LREAL(timeData.iDays)*24 + // 24 hours per day
+						INT_TO_LREAL(timeData.iHours))*60 + // 60 minutes per hour
+						INT_TO_LREAL(timeData.iMinutes))*60 + // 60 secondes per minute
+						INT_TO_LREAL(timeData.iSeconds)); // 1 second per second]]></ST>
+    </Implementation>
+  </POU>
+</TcPlcObject>
